@@ -127,7 +127,7 @@ The crash log length was pretty impressive and after the first 5 lines, it looke
 <p>The solution to this would be to sanitize attributed strings. Remove unnecessary attributes aka keep only the attributes you need. Create a new attributed string with the string from the source attributed string. Read attributes' values you&rsquo;re interested in (from source attributed string) and add them in the new attributed string.</p>
 <p>In my case, I&rsquo;ve removed redundant attributes and set the value of the &ldquo;star of the show&rdquo; - <code>.foregroundColor</code> attribute to <code>UIColor.black</code> to avoid colors with non-supported color space by the <code>NSCoder</code>.</p>
 <h3 id="final-thoughts">Final thoughts</h3>
-<p>Reading again the error message &ldquo;Only RGBA or White color spaces are supported in this situation.&rdquo; raises a big question, why this situation is so special? From the message, we can see the Apple developer is aware that other color models won&rsquo;t be supported, but this is fully opaque behavior to the outside developers.</p>
+<p>Reading again the error message &ldquo;Only RGBA or White color spaces are supported in this situation.&rdquo; raises a big question, why this situation is so special? From the message, we can see the Apple developer is aware that other color models won&rsquo;t be supported, but this is fully opaque behavior to the outside developers. Bug?!</p>
 
 
 </div>
