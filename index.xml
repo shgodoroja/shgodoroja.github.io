@@ -10,11 +10,77 @@
     <atom:link href="https://thinkcocoa.org/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Saving NSAttributedString in Core Data</title>
+      <title>About</title>
+      <link>https://thinkcocoa.org/about/</link>
+      <pubDate>Sun, 29 Nov 2020 02:57:17 +0200</pubDate>
+      <guid>https://thinkcocoa.org/about/</guid>
+      <description>&lt;p&gt;Black hair and reddish beard, born last century, contrarian, fond of gorgeous designs &amp;amp; great user experience, iOS dev since inception, soon a dad, european.&lt;/p&gt;
+&lt;p&gt;Tags: architecture, core-data, unit &amp;amp; ui testing, ux, frameworks.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Contact me&lt;/strong&gt; on &lt;a href=&#34;https://twitter.com/@shgodoroja&#34;&gt;Twitter&lt;/a&gt;&lt;br&gt;
+&lt;strong&gt;For memes&lt;/strong&gt; contact &lt;a href=&#34;https://twitter.com/@elonmusk&#34;&gt;@elonmusk&lt;/a&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+Have a nice day!
+
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/JJwecS3kNCM&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>An unfortunate surprise when saving NSAttributedString in Core Data</title>
       <link>https://thinkcocoa.org/posts/saving-nsattributedstring-core-data/</link>
       <pubDate>Sun, 29 Nov 2020 02:06:36 +0200</pubDate>
       <guid>https://thinkcocoa.org/posts/saving-nsattributedstring-core-data/</guid>
-      <description></description>
+      <description>&lt;h3 id=&#34;introduction&#34;&gt;Introduction&lt;/h3&gt;
+&lt;p&gt;Saving an attributed string in &lt;code&gt;Core Data&lt;/code&gt; isn&amp;rsquo;t a difficult job. While the &lt;code&gt;NSAttributedString&lt;/code&gt; type it&amp;rsquo;s not listed in the entity attribute&amp;rsquo;s type list, you can:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Set attribute&amp;rsquo;s type to &lt;code&gt;Transformable&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Create a subclass of &lt;code&gt;NSSecureUnarchiveFromDataTransformer&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Go back to &lt;code&gt;Core Data Model&lt;/code&gt; editor, and update &lt;code&gt;Transformer&lt;/code&gt; field of the attribute, with the class name from the previous step.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;That&amp;rsquo;s everything you should usually do to store an attributed string in &lt;code&gt;Core Data&lt;/code&gt;. However, I&amp;rsquo;ve encountered an interesting crash, after implementing this.&lt;/p&gt;
+&lt;h3 id=&#34;backstory&#34;&gt;Backstory&lt;/h3&gt;
+&lt;p&gt;One of my app&amp;rsquo;s features allows users to fetch text from a PDF file via &lt;code&gt;PDFSelection&lt;/code&gt;. The selection returns selected text in plain form or attributed form. I&amp;rsquo;m using the attributed version of the text because I need some of its styling. For testing purposes, I have 2 PDFs, and both proved the feature works correctly.&lt;/p&gt;
+&lt;p&gt;However, a few days ago I added a new PDF, which started to crash my app. Looking at the crash logs I saw the following: (a fragment)&lt;/p&gt;
+&lt;p&gt;&lt;code&gt; *** Assertion failure in -[UICGColor encodeWithCoder:], UIColor.m:2252 2020-11-29 17:27:58.693467+0200 EpicNote[40455:2797002] [error] error: SQLCore dispatchRequest: exception handling request: &amp;lt;NSSQLSaveChangesRequestContext: 0x280d4db00&amp;gt; , &amp;lt;shared NSSecureUnarchiveFromData transformer&amp;gt; threw while encoding a value. with userInfo of { NSUnderlyingError = &amp;quot;Error Domain=NSCocoaErrorDomain Code=4866 \&amp;quot;Caught exception during archival: Only RGBA or White color spaces are supported in this situation.\n(\n\t0  CoreFoundation           0x00000001841639e8 96F8386D-D88A-3C89-A323-A17975C3317F + 1157608\n\t1  libobjc.A.dylib           0x0000000197b14b54 objc_exception_throw + 56\n\t2  CoreFoundation&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;First thing to notice is the crash reason:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Assertion failure in -[UICGColor encodeWithCoder:], UIColor.m:2252;
+shared NSSecureUnarchiveFromData transformer threw while encoding a value.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;The error message was:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Caught exception during archival: Only RGBA or White color spaces are supported in this situation.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;troubleshooting&#34;&gt;Troubleshooting&lt;/h3&gt;
+&lt;p&gt;In hindsight I should better analyze the crash log details, it contained a crucial hint that I initially missed. About that a bit later.&lt;/p&gt;
+&lt;p&gt;I made a shortlist of the possible sources of the crash:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;UIColor&lt;/code&gt; created using &lt;code&gt;init(patternImage image: UIImage)&lt;/code&gt;. Maybe color build based on an image was corrupted.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;NSSecureUnarchiveFromDataTransformer&lt;/code&gt;. Maybe I&amp;rsquo;ve misimplemented the subclass, although based on the error message there were few chances.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;NSSecureCoding&lt;/code&gt;. Check classes that are storing the color and know how to serialize/deserialize a color object, again maybe something was misimplemented.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To check the aforementioned list, I needed a few good hours, mixed with a few breaks. I&amp;rsquo;ve also started to question my life choices, whether programming is still the job I want to do (&amp;ldquo;this damn thing should work, it was working earlier!&amp;quot;). In the end, everything was set up correctly, nothing was misplaced.&lt;/p&gt;
+&lt;p&gt;I decided to re-read the crash log line by line, to see if I didn&amp;rsquo;t miss anything. Well, of course, I did!
+The crash log length was pretty impressive and after the first 5 lines, it looked homogenous. But not long after I started to analyze again the error message I saw the life-saving &lt;code&gt;DataModelKit&lt;/code&gt; which is one of my frameworks. On the same line was living this scribble &lt;code&gt;s12DataModelKit35DMKAttributedStringValueTransformerC018reverseTransformedF0yypSgAEF&lt;/code&gt;. Once I isolated &lt;code&gt;DMKAttributedStringValueTransformer&lt;/code&gt; from that mess, I instantly realized it was a color value from the attributed string. To prove my assumption right, I checked the attributed string received from the problematic PDF, for the color attributes:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NSColor = &amp;ldquo;kCGColorSpaceModelCMYK 0 0 0 1 1 &amp;ldquo;;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Oh, so it&amp;rsquo;s a CMYK color space. This is why Core Data complained. It wants only colors with RGB or White color space.&lt;/p&gt;
+&lt;p&gt;I&amp;rsquo;ve also checked another PDF for this and the result was:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NSColor = &amp;ldquo;kCGColorSpaceModelMonochrome 0 1 &amp;ldquo;;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;This one has a white color space. This works fine.&lt;/p&gt;
+&lt;h3 id=&#34;solution&#34;&gt;Solution&lt;/h3&gt;
+&lt;p&gt;No wonder this issue came as a huge surprise. I expected that a class as &lt;code&gt;NSAttributedString&lt;/code&gt; that conforms to &lt;code&gt;NSSecureCoding&lt;/code&gt; have no problems encoding/decoding it&amp;rsquo;s values. Otherwise, it&amp;rsquo;s a dangerous behavior. In my case attributed strings are provided by the &lt;code&gt;PDFKit&lt;/code&gt; APIs, and because attributed strings can have lots of attributes, Core Data may complain about some of them having the &amp;ldquo;wrong&amp;rdquo; value. Which one? I don&amp;rsquo;t know. The future seems to be no bright.&lt;/p&gt;
+&lt;p&gt;The solution to this would be to sanitize attributed strings. Remove unnecessary attributes aka keep only the attributes you need. Create a new attributed string with the string from the source attributed string. Read attributes&#39; values you&amp;rsquo;re interested in (from source attributed string) and add them in the new attributed string.&lt;/p&gt;
+&lt;p&gt;In my case, I&amp;rsquo;ve removed redundant attributes and set the value of the &amp;ldquo;star of the show&amp;rdquo; - &lt;code&gt;.foregroundColor&lt;/code&gt; attribute to &lt;code&gt;UIColor.black&lt;/code&gt; to avoid colors with non-supported color space by the &lt;code&gt;NSCoder&lt;/code&gt;.&lt;/p&gt;
+</description>
     </item>
     
   </channel>

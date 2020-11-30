@@ -66,6 +66,7 @@
 <h2 class="visually-hidden">Main menu</h2>
 <ul class="navbar">
 <li><a href="/" class="active" aria-current="page">Home</a></li>
+<li><a href="/about/">About</a></li>
 <li><a href="/posts/" class="active" aria-current="page">Posts</a></li>
 </ul>
 </nav>
@@ -75,11 +76,12 @@
 <h1 class="title">Posts</h1>
 <article class="section-posts list-view">
 <header>
-<h2 class="title "><a href="/posts/saving-nsattributedstring-core-data/">Saving NSAttributedString in Core Data</a></h2>
+<h2 class="title "><a href="/posts/saving-nsattributedstring-core-data/">An unfortunate surprise when saving NSAttributedString in Core Data</a></h2>
 
 </header>
 <div class="content">
-
+Introduction Saving an attributed string in Core Data isn&rsquo;t a difficult job. While the NSAttributedString type it&rsquo;s not listed in the entity attribute&rsquo;s type list, you can:
+ Set attribute&rsquo;s type to Transformable Create a subclass of NSSecureUnarchiveFromDataTransformer Go back to Core Data Model editor, and update Transformer field of the attribute, with the class name from the previous step.  That&rsquo;s everything you should usually do to store an attributed string in Core Data.
 </div>
 </article>
 

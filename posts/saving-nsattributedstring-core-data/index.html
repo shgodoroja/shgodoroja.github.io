@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
-<title>Saving NSAttributedString in Core Data – Think Cocoa</title>
-<meta name="description" content="">
+<title>An unfortunate surprise when saving NSAttributedString in Core Data – Think Cocoa</title>
+<meta name="description" content="Introduction Saving an attributed string in Core Data isn&amp;amp;rsquo;t a difficult job. While the NSAttributedString type it&amp;amp;rsquo;s not listed in the entity attribute&amp;amp;rsquo;s …">
 <meta name="created" content="2020-11-29T02:06:36+0200">
 <meta name="modified" content="2020-11-29T02:06:36+0200">
 
 
 <meta property="og:site_name" content="Think Cocoa">
-<meta property="og:title" content="Saving NSAttributedString in Core Data">
+<meta property="og:title" content="An unfortunate surprise when saving NSAttributedString in Core Data">
 <meta property="og:url" content="https://thinkcocoa.org/posts/saving-nsattributedstring-core-data/">
 <meta property="og:type" content="article">
 
@@ -29,11 +29,11 @@
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "headline": "Saving NSAttributedString in Core Data",
+    "headline": "An unfortunate surprise when saving NSAttributedString in Core Data",
     "datePublished": "2020-11-29T02:06:36+02:00",
     "dateModified": "2020-11-29T02:06:36+02:00",
     "url" : "https://thinkcocoa.org/posts/saving-nsattributedstring-core-data/",
-    "description": ,
+    "description": "Introduction Saving an attributed string in Core Data isn\u0026amp;rsquo;t a difficult job. While the NSAttributedString type it\u0026amp;rsquo;s not listed in the entity attribute\u0026amp;rsquo;s …",
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": "https://thinkcocoa.org"
@@ -68,6 +68,7 @@
 <h2 class="visually-hidden">Main menu</h2>
 <ul class="navbar">
 <li><a href="/">Home</a></li>
+<li><a href="/about/">About</a></li>
 <li><a href="/posts/" class="active" aria-current="page">Posts</a></li>
 </ul>
 </nav>
@@ -76,9 +77,54 @@
 <main class="main layout__main">
 <article class="section-posts single-view">
 <header>
-<h1 class="title ">Saving NSAttributedString in Core Data</h1>
+<h1 class="title ">An unfortunate surprise when saving NSAttributedString in Core Data</h1>
 </header>
 <div class="content">
+<h3 id="introduction">Introduction</h3>
+<p>Saving an attributed string in <code>Core Data</code> isn&rsquo;t a difficult job. While the <code>NSAttributedString</code> type it&rsquo;s not listed in the entity attribute&rsquo;s type list, you can:</p>
+<ol>
+<li>Set attribute&rsquo;s type to <code>Transformable</code></li>
+<li>Create a subclass of <code>NSSecureUnarchiveFromDataTransformer</code></li>
+<li>Go back to <code>Core Data Model</code> editor, and update <code>Transformer</code> field of the attribute, with the class name from the previous step.</li>
+</ol>
+<p>That&rsquo;s everything you should usually do to store an attributed string in <code>Core Data</code>. However, I&rsquo;ve encountered an interesting crash, after implementing this.</p>
+<h3 id="backstory">Backstory</h3>
+<p>One of my app&rsquo;s features allows users to fetch text from a PDF file via <code>PDFSelection</code>. The selection returns selected text in plain form or attributed form. I&rsquo;m using the attributed version of the text because I need some of its styling. For testing purposes, I have 2 PDFs, and both proved the feature works correctly.</p>
+<p>However, a few days ago I added a new PDF, which started to crash my app. Looking at the crash logs I saw the following: (a fragment)</p>
+<p><code> *** Assertion failure in -[UICGColor encodeWithCoder:], UIColor.m:2252 2020-11-29 17:27:58.693467+0200 EpicNote[40455:2797002] [error] error: SQLCore dispatchRequest: exception handling request: &lt;NSSQLSaveChangesRequestContext: 0x280d4db00&gt; , &lt;shared NSSecureUnarchiveFromData transformer&gt; threw while encoding a value. with userInfo of { NSUnderlyingError = &quot;Error Domain=NSCocoaErrorDomain Code=4866 \&quot;Caught exception during archival: Only RGBA or White color spaces are supported in this situation.\n(\n\t0  CoreFoundation           0x00000001841639e8 96F8386D-D88A-3C89-A323-A17975C3317F + 1157608\n\t1  libobjc.A.dylib           0x0000000197b14b54 objc_exception_throw + 56\n\t2  CoreFoundation</code></p>
+<p>First thing to notice is the crash reason:</p>
+<blockquote>
+<p>Assertion failure in -[UICGColor encodeWithCoder:], UIColor.m:2252;
+shared NSSecureUnarchiveFromData transformer threw while encoding a value.</p>
+</blockquote>
+<p>The error message was:</p>
+<blockquote>
+<p>Caught exception during archival: Only RGBA or White color spaces are supported in this situation.</p>
+</blockquote>
+<h3 id="troubleshooting">Troubleshooting</h3>
+<p>In hindsight I should better analyze the crash log details, it contained a crucial hint that I initially missed. About that a bit later.</p>
+<p>I made a shortlist of the possible sources of the crash:</p>
+<ul>
+<li><code>UIColor</code> created using <code>init(patternImage image: UIImage)</code>. Maybe color build based on an image was corrupted.</li>
+<li><code>NSSecureUnarchiveFromDataTransformer</code>. Maybe I&rsquo;ve misimplemented the subclass, although based on the error message there were few chances.</li>
+<li><code>NSSecureCoding</code>. Check classes that are storing the color and know how to serialize/deserialize a color object, again maybe something was misimplemented.</li>
+</ul>
+<p>To check the aforementioned list, I needed a few good hours, mixed with a few breaks. I&rsquo;ve also started to question my life choices, whether programming is still the job I want to do (&ldquo;this damn thing should work, it was working earlier!&quot;). In the end, everything was set up correctly, nothing was misplaced.</p>
+<p>I decided to re-read the crash log line by line, to see if I didn&rsquo;t miss anything. Well, of course, I did!
+The crash log length was pretty impressive and after the first 5 lines, it looked homogenous. But not long after I started to analyze again the error message I saw the life-saving <code>DataModelKit</code> which is one of my frameworks. On the same line was living this scribble <code>s12DataModelKit35DMKAttributedStringValueTransformerC018reverseTransformedF0yypSgAEF</code>. Once I isolated <code>DMKAttributedStringValueTransformer</code> from that mess, I instantly realized it was a color value from the attributed string. To prove my assumption right, I checked the attributed string received from the problematic PDF, for the color attributes:</p>
+<blockquote>
+<p>NSColor = &ldquo;kCGColorSpaceModelCMYK 0 0 0 1 1 &ldquo;;</p>
+</blockquote>
+<p>Oh, so it&rsquo;s a CMYK color space. This is why Core Data complained. It wants only colors with RGB or White color space.</p>
+<p>I&rsquo;ve also checked another PDF for this and the result was:</p>
+<blockquote>
+<p>NSColor = &ldquo;kCGColorSpaceModelMonochrome 0 1 &ldquo;;</p>
+</blockquote>
+<p>This one has a white color space. This works fine.</p>
+<h3 id="solution">Solution</h3>
+<p>No wonder this issue came as a huge surprise. I expected that a class as <code>NSAttributedString</code> that conforms to <code>NSSecureCoding</code> have no problems encoding/decoding it&rsquo;s values. Otherwise, it&rsquo;s a dangerous behavior. In my case attributed strings are provided by the <code>PDFKit</code> APIs, and because attributed strings can have lots of attributes, Core Data may complain about some of them having the &ldquo;wrong&rdquo; value. Which one? I don&rsquo;t know. The future seems to be no bright.</p>
+<p>The solution to this would be to sanitize attributed strings. Remove unnecessary attributes aka keep only the attributes you need. Create a new attributed string with the string from the source attributed string. Read attributes' values you&rsquo;re interested in (from source attributed string) and add them in the new attributed string.</p>
+<p>In my case, I&rsquo;ve removed redundant attributes and set the value of the &ldquo;star of the show&rdquo; - <code>.foregroundColor</code> attribute to <code>UIColor.black</code> to avoid colors with non-supported color space by the <code>NSCoder</code>.</p>
 
 
 </div>
