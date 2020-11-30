@@ -38,8 +38,9 @@ Have a nice day!
       <description>&lt;h3 id=&#34;introduction&#34;&gt;Introduction&lt;/h3&gt;
 &lt;p&gt;Saving an attributed string in &lt;code&gt;Core Data&lt;/code&gt; isn&amp;rsquo;t a difficult job. While the &lt;code&gt;NSAttributedString&lt;/code&gt; type it&amp;rsquo;s not listed in the entity attribute&amp;rsquo;s type list, you can:&lt;/p&gt;
 &lt;ol&gt;
-&lt;li&gt;Set attribute&amp;rsquo;s type to &lt;code&gt;Transformable&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;Create a subclass of &lt;code&gt;NSSecureUnarchiveFromDataTransformer&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Set entity attribute&amp;rsquo;s type to &lt;code&gt;Transformable&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Create a subclass of &lt;code&gt;NSSecureUnarchiveFromDataTransformer&lt;/code&gt;, return &lt;code&gt;NSAttributedString.self&lt;/code&gt; in &lt;code&gt;allowedTopLevelClasses&lt;/code&gt; method.&lt;/li&gt;
+&lt;li&gt;Register the new subclass of &lt;code&gt;NSSecureUnarchiveFromDataTransformer&lt;/code&gt; before Core Data stack is initialized.&lt;/li&gt;
 &lt;li&gt;Go back to &lt;code&gt;Core Data Model&lt;/code&gt; editor, and update &lt;code&gt;Transformer&lt;/code&gt; field of the attribute, with the class name from the previous step.&lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;That&amp;rsquo;s everything you should usually do to store an attributed string in &lt;code&gt;Core Data&lt;/code&gt;. However, I&amp;rsquo;ve encountered an interesting crash, after implementing this.&lt;/p&gt;
@@ -65,7 +66,7 @@ shared NSSecureUnarchiveFromData transformer threw while encoding a value.&lt;/p
 &lt;li&gt;&lt;code&gt;NSSecureCoding&lt;/code&gt;. Check classes that are storing the color and know how to serialize/deserialize a color object, again maybe something was misimplemented.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;To check the aforementioned list, I needed a few good hours, mixed with a few breaks. I&amp;rsquo;ve also started to question my life choices, whether programming is still the job I want to do (&amp;ldquo;this damn thing should work, it was working earlier!&amp;quot;). In the end, everything was set up correctly, nothing was misplaced.&lt;/p&gt;
-&lt;p&gt;I decided to re-read the crash log line by line, to see if I didn&amp;rsquo;t miss anything. Well, of course, I did!
+&lt;p&gt;I decided to re-read the crash log line by line, to see if I didn&amp;rsquo;t miss anything important. Well, of course, I did!
 The crash log length was pretty impressive and after the first 5 lines, it looked homogenous. But not long after I started to analyze again the error message I saw the life-saving &lt;code&gt;DataModelKit&lt;/code&gt; which is one of my frameworks. On the same line was living this scribble &lt;code&gt;s12DataModelKit35DMKAttributedStringValueTransformerC018reverseTransformedF0yypSgAEF&lt;/code&gt;. Once I isolated &lt;code&gt;DMKAttributedStringValueTransformer&lt;/code&gt; from that mess, I instantly realized it was a color value from the attributed string. To prove my assumption right, I checked the attributed string received from the problematic PDF, for the color attributes:&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;NSColor = &amp;ldquo;kCGColorSpaceModelCMYK 0 0 0 1 1 &amp;ldquo;;&lt;/p&gt;
@@ -80,6 +81,8 @@ The crash log length was pretty impressive and after the first 5 lines, it looke
 &lt;p&gt;No wonder this issue came as a huge surprise. I expected that a class as &lt;code&gt;NSAttributedString&lt;/code&gt; that conforms to &lt;code&gt;NSSecureCoding&lt;/code&gt; have no problems encoding/decoding it&amp;rsquo;s values. Otherwise, it&amp;rsquo;s a dangerous behavior. In my case attributed strings are provided by the &lt;code&gt;PDFKit&lt;/code&gt; APIs, and because attributed strings can have lots of attributes, Core Data may complain about some of them having the &amp;ldquo;wrong&amp;rdquo; value. Which one? I don&amp;rsquo;t know. The future seems to be no bright.&lt;/p&gt;
 &lt;p&gt;The solution to this would be to sanitize attributed strings. Remove unnecessary attributes aka keep only the attributes you need. Create a new attributed string with the string from the source attributed string. Read attributes&#39; values you&amp;rsquo;re interested in (from source attributed string) and add them in the new attributed string.&lt;/p&gt;
 &lt;p&gt;In my case, I&amp;rsquo;ve removed redundant attributes and set the value of the &amp;ldquo;star of the show&amp;rdquo; - &lt;code&gt;.foregroundColor&lt;/code&gt; attribute to &lt;code&gt;UIColor.black&lt;/code&gt; to avoid colors with non-supported color space by the &lt;code&gt;NSCoder&lt;/code&gt;.&lt;/p&gt;
+&lt;h3 id=&#34;final-thoughts&#34;&gt;Final thoughts&lt;/h3&gt;
+&lt;p&gt;Reading again the error message &amp;ldquo;Only RGBA or White color spaces are supported in this situation.&amp;rdquo; raises a big question, why this situation is so special? From the message, we can see the Apple developer is aware that other color models won&amp;rsquo;t be supported, but this is fully opaque behavior to the outside developers.&lt;/p&gt;
 </description>
     </item>
     

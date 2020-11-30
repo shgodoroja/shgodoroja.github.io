@@ -81,7 +81,7 @@
 </header>
 <div class="content">
 Introduction Saving an attributed string in Core Data isn&rsquo;t a difficult job. While the NSAttributedString type it&rsquo;s not listed in the entity attribute&rsquo;s type list, you can:
- Set attribute&rsquo;s type to Transformable Create a subclass of NSSecureUnarchiveFromDataTransformer Go back to Core Data Model editor, and update Transformer field of the attribute, with the class name from the previous step.  That&rsquo;s everything you should usually do to store an attributed string in Core Data.
+ Set entity attribute&rsquo;s type to Transformable. Create a subclass of NSSecureUnarchiveFromDataTransformer, return NSAttributedString.self in allowedTopLevelClasses method. Register the new subclass of NSSecureUnarchiveFromDataTransformer before Core Data stack is initialized. Go back to Core Data Model editor, and update Transformer field of the attribute, with the class name from the previous step.
 </div>
 </article>
 
