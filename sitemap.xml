@@ -3,15 +3,26 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://thinkcocoa.org/posts/</loc>
+    <lastmod>2020-11-29T02:06:36+02:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://thinkcocoa.org/posts/saving-nsattributedstring-core-data/</loc>
+    <lastmod>2020-11-29T02:06:36+02:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://thinkcocoa.org/</loc>
+    <lastmod>2020-11-29T02:06:36+02:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://thinkcocoa.org/categories/</loc>
   </url>
   
   <url>
     <loc>https://thinkcocoa.org/tags/</loc>
-  </url>
-  
-  <url>
-    <loc>https://thinkcocoa.org/</loc>
   </url>
   
 </urlset>
